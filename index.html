@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerar Certificado</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 50px;
+            margin: 0;
+        }
+
+        form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            width: calc(100% - 22px);
+        }
+
+        button {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            width: 80%;
+        }
+
+        li {
+            margin-bottom: 10px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cert-info {
+            flex-grow: 1;
+            margin-right: 20px;
+        }
+
+        a {
+            text-decoration: none;
+            color: #007BFF;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .icon {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Gerar Certificado</h1>
+    <form id="certForm" onsubmit="addCertificate(event)">
+        <input type="text" id="nome" placeholder="Digite seu nome" required>
+        <input type="text" id="curso" placeholder="Digite o nome do curso" required>
+        <button type="submit">Gerar Certificado</button>
+    </form>
+    <ul id="certList"></ul>
+
+    <script>
+        function addCertificate(event) {
+            event.preventDefault();
+            const nome = document.getElementById('nome').value;
+            const curso = document.getElementById('curso').value;
+
+            fetch('gerar_certificado.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `nome=${encodeURIComponent(nome)}&curso=${encodeURIComponent(curso)}&download=true&action=create`
+            })
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    appendCertificateToList(nome, curso, new Date().toISOString().slice(0, 10), url);
+                    // Limpar formulário após adicionar
+                    document.getElementById('nome').value = '';
+                    document.getElementById('curso').value = '';
+                })
+                .catch(error => console.error('Erro:', error));
+        }
+
+        function appendCertificateToList(nome, curso, data, url) {
+            const li = document.createElement('li');
+            li.innerHTML = `
+            <div class="cert-info">
+                <strong>Nome:</strong> ${nome}<br>
+                <strong>Curso:</strong> ${curso}<br>
+                <strong>Data:</strong> ${data}
+            </div>
+            <div>
+                <a href="${url}" target="_blank"><i class="fas fa-eye icon"></i>Visualizar</a>
+                <a href="${url}" download="certificado_${nome}_${curso}.pdf"><i class="fas fa-download icon"></i>Baixar</a>
+            </div>`;
+            document.getElementById('certList').appendChild(li);
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            fetch('get_certificados.php')
+                .then(response => response.json())
+                .then(certificados => {
+                    certificados.forEach(cert => {
+                        const { nome, curso, data_emissao, arquivo_url } = cert;
+                        appendCertificateToList(nome, curso, data_emissao, arquivo_url);  
+                    });
+                })
+                .catch(error => console.error('Erro ao carregar certificados:', error));
+        });
+    </script>
+</body>
+
+</html>
